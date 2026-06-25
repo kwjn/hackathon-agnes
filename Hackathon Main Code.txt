@@ -160,7 +160,7 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
 .timeline-item.completed { opacity: 0.6; }
 .timeline-item.completed .timeline-card { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.03); }
 .timeline-item.completed::before { background: rgba(0,212,255,0.3); border-color: rgba(0,212,255,0.3); }
-.timeline-item .timeline-card { transitionion: all 0.5s ease; }
+.timeline-item .timeline-card { transition: all 0.5s ease; }
 .timeline-item.current .timeline-card {
   border-color: rgba(0,212,255,0.3);
   box-shadow: 0 0 20px rgba(0,212,255,0.1), inset 0 0 20px rgba(0,212,255,0.03);
