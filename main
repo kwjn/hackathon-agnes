@@ -431,10 +431,6 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
         </select>
       </div>
       <div class="form-group">
-        <label>Last Revision Date</label>
-        <input class="form-input" id="subjLastRev" type="date" />
-      </div>
-      <div class="form-group">
         <label>Preferred Study Duration (minutes)</label>
         <input class="form-input" id="subjDuration" type="number" min="15" max="120" value="30" />
       </div>
