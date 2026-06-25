@@ -1,0 +1,1970 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>studentos-ai-planner-ff8483</title>
+  <!-- AGNES:HEAD_EXTRA -->
+  <style>
+  /* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, system-ui, sans-serif;
+  background: #080c22;
+  color: #e2e8f0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+a { color: #00d4ff; text-decoration: none; }
+button { cursor: pointer; font-family: inherit; }
+input, select, textarea { font-family: inherit; font-size: inherit; }
+
+/* ===== FLOATING BACKGROUND BLOBS ===== */
+.blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+  animation: blobFloat 20s ease-in-out infinite;
+}
+.blob-1 { width: 400px; height: 400px; background: rgba(0,212,255,0.08); top: -10%; left: -5%; }
+.blob-2 { width: 350px; height: 350px; background: rgba(139,92,246,0.08); bottom: -5%; right: -5%; animation-delay: -7s; }
+.blob-3 { width: 250px; height: 250px; background: rgba(0,212,255,0.05); top: 50%; left: 50%; animation-delay: -14s; }
+@keyframes blobFloat {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(30px,-30px) scale(1.1); }
+  66% { transform: translate(-20px,20px) scale(0.95); }
+}
+
+/* ===== APP SHELL ===== */
+.app-shell { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+.page-container { flex: 1; padding: 24px 20px 100px; max-width: 720px; margin: 0 auto; width: 100%; }
+.page { display: none; animation: fadeSlideIn 0.4s ease; }
+.page.active { display: block; }
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== GLASS CARD ===== */
+.glass-card {
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 20px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+.glass-card:hover { border-color: rgba(0,212,255,0.15); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,212,255,0.08); }
+
+/* ===== NAV ===== */
+.main-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(8,12,34,0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6px 0 env(safe-area-inset-bottom, 6px);
+  height: 64px;
+}
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: none; border: none; color: rgba(255,255,255,0.4);
+  font-size: 10px; padding: 4px 10px; transition: all 0.3s ease;
+  position: relative;
+}
+.nav-item .nav-icon { font-size: 20px; line-height: 1; }
+.nav-item.active { color: #00d4ff; }
+.nav-item.active::after {
+  content: ''; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+  width: 20px; height: 3px; border-radius: 2px; background: #00d4ff;
+  box-shadow: 0 0 12px rgba(0,212,255,0.5);
+}
+.nav-item:hover { color: rgba(255,255,255,0.7); }
+
+/* ===== BUTTONS ===== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 24px; border-radius: 12px; border: none;
+  font-size: 15px; font-weight: 600;
+  transition: all 0.3s ease; position: relative; overflow: hidden;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #00d4ff, #0ea5e9);
+  color: #080c22;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,212,255,0.3); }
+.btn-secondary {
+  background: rgba(139,92,246,0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(139,92,246,0.25);
+}
+.btn-secondary:hover { background: rgba(139,92,246,0.25); transform: translateY(-1px); }
+.btn-ghost {
+  background: rgba(255,255,255,0.05);
+  color: #94a3b8;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+.btn-sm { padding: 8px 16px; font-size: 13px; border-radius: 10px; }
+.btn-danger { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+.btn-danger:hover { background: rgba(239,68,68,0.25); }
+
+/* ===== FORMS ===== */
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; color: #94a3b8; margin-bottom: 6px; }
+.form-input, .form-select {
+  width: 100%; padding: 12px 16px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; color: #e2e8f0; font-size: 15px;
+  transition: all 0.3s ease;
+}
+.form-input:focus, .form-select:focus {
+  outline: none; border-color: #00d4ff;
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+}
+.form-input::placeholder { color: #475569; }
+.form-select option { background: #111638; color: #e2e8f0; }
+
+/* ===== HEADINGS ===== */
+.page-title { font-size: 28px; font-weight: 700; margin-bottom: 4px; background: linear-gradient(135deg, #e2e8f0, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.page-subtitle { font-size: 14px; color: #64748b; margin-bottom: 24px; }
+.section-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #e2e8f0; }
+
+/* ===== TIMELINE ===== */
+.timeline { position: relative; padding-left: 28px; }
+.timeline::before {
+  content: ''; position: absolute; left: 8px; top: 0; bottom: 0;
+  width: 2px; background: linear-gradient(to bottom, rgba(0,212,255,0.3), rgba(139,92,246,0.3));
+}
+.timeline-item { position: relative; margin-bottom: 16px; animation: slideUp 0.4s ease; }
+.timeline-item::before {
+  content: ''; position: absolute; left: -24px; top: 20px;
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid rgba(0,212,255,0.3);
+  background: #080c22;
+}
+.timeline-item.study::before { border-color: #00d4ff; background: rgba(0,212,255,0.15); box-shadow: 0 0 12px rgba(0,212,255,0.2); }
+.timeline-item.break::before { border-color: #8b5cf6; width: 8px; height: 8px; top: 22px; left: -22px; }
+.timeline-item.meal::before { border-color: #f59e0b; background: rgba(245,158,11,0.15); }
+.timeline-item.winddown::before { border-color: #f97316; }
+.timeline-item.bedtime::before { border-color: #a78bfa; background: rgba(167,139,250,0.2); }
+.timeline-item.completed { opacity: 0.6; }
+.timeline-item.completed .timeline-card { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.03); }
+.timeline-item.completed::before { background: rgba(0,212,255,0.3); border-color: rgba(0,212,255,0.3); }
+.timeline-item .timeline-card { transitionion: all 0.5s ease; }
+.timeline-item.current .timeline-card {
+  border-color: rgba(0,212,255,0.3);
+  box-shadow: 0 0 20px rgba(0,212,255,0.1), inset 0 0 20px rgba(0,212,255,0.03);
+}
+.timeline-item.current::before { background: #00d4ff; border-color: #00d4ff; box-shadow: 0 0 16px rgba(0,212,255,0.5); animation: pulse 2s ease infinite; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 12px rgba(0,212,255,0.3); } 50% { box-shadow: 0 0 24px rgba(0,212,255,0.6); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+.timeline-card { padding: 16px; border-radius: 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); }
+.timeline-card .method-label { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; background: rgba(0,212,255,0.1); color: #00d4ff; }
+.timeline-card .reason { font-size: 13px; color: #64748b; margin-top: 8px; font-style: italic; }
+.timeline-card .time-badge { font-size: 12px; color: #00d4ff; font-weight: 600; }
+.timeline-item.break .time-badge { color: #8b5cf6; }
+.timeline-item.meal .time-badge { color: #f59e0b; }
+.timeline-item.winddown .time-badge { color: #f97316; }
+.timeline-item.bedtime .time-badge { color: #a78bfa; }
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal-content {
+  background: #111638;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 28px;
+  max-width: 480px; width: 100%;
+  max-height: 90vh; overflow-y: auto;
+  animation: modalSlide 0.3s ease;
+}
+@keyframes modalSlide { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.modal-title { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+.modal-actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+
+/* ===== TOAST ===== */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: rgba(17,22,56,0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 12px 20px;
+  color: #e2e8f0; font-size: 14px;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+@keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes toastOut { to { opacity: 0; transform: translateX(20px); } }
+
+/* ===== FOCUS MODE ===== */
+.focus-overlay {
+  position: fixed; inset: 0; z-index: 250;
+  background: #080c22;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 20px;
+}
+.focus-overlay.active { display: flex; }
+.focus-timer { font-size: 80px; font-weight: 700; letter-spacing: 2px; color: #e2e8f0; margin: 20px 0; font-variant-numeric: tabular-nums; }
+.focus-ring { position: relative; margin-bottom: 20px; }
+.focus-ring svg { transform: rotate(-90deg); }
+.focus-ring .bg { fill: none; stroke: rgba(255,255,255,0.06); }
+.focus-ring .progress { fill: none; stroke: url(#focusGrad); stroke-linecap: round; transition: stroke-dashoffset 0.3s ease; }
+.focus-subject { font-size: 22px; font-weight: 600; color: #00d4ff; }
+.focus-topic { font-size: 16px; color: #94a3b8; margin: 4px 0 8px; }
+.focus-method { font-size: 14px; color: #a78bfa; }
+.focus-instruction { font-size: 14px; color: #64748b; max-width: 400px; text-align: center; margin-top: 12px; line-height: 1.6; }
+.focus-exit { position: absolute; top: 20px; right: 20px; background: none; border: none; color: #64748b; font-size: 24px; }
+.focus-completed { text-align: center; }
+.focus-completed h2 { font-size: 28px; margin-bottom: 12px; }
+.rating-btns { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
+.rating-btn {
+  padding: 12px 24px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04); color: #e2e8f0; font-size: 16px;
+  transition: all 0.3s ease;
+}
+.rating-btn:hover { border-color: #00d4ff; background: rgba(0,212,255,0.1); transform: translateY(-2px); }
+
+/* ===== SOUNDS ===== */
+.sound-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sound-card {
+  padding: 16px; border-radius: 16px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+  text-align: center; transition: all 0.3s ease;
+}
+.sound-card { padding: 16px; border-radius: 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); }
+.sound-card:hover { border-color: rgba(0,212,255,0.2); transform: translateY(-2px); }
+.sound-card .sound-icon { font-size: 28px; margin-bottom: 6px; }
+.sound-card .sound-name { font-size: 13px; font-weight: 500; }
+.sound-card .sound-controls { display: flex; gap: 6px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
+.sound-btn { padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); color: #94a3b8; font-size: 11px; transition: all 0.2s; }
+.sound-btn:hover { background: rgba(0,212,255,0.1); color: #00d4ff; border-color: rgba(0,212,255,0.2); }
+.sound-btn.playing { background: rgba(0,212,255,0.15); color: #00d4ff; border-color: #00d4ff; }
+
+/* ===== MODE CARDS ===== */
+.mode-cards { display: grid; gap: 16px; }
+.mode-card {
+  padding: 20px; border-radius: 20px;
+  background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.06);
+  cursor: pointer; transition: all 0.3s ease;
+}
+.mode-card:hover { border-color: rgba(0,212,255,0.2); transform: translateY(-2px); }
+.mode-card.selected { border-color: #00d4ff; background: rgba(0,212,255,0.08); box-shadow: 0 0 20px rgba(0,212,255,0.1); }
+.mode-card .mode-name { font-size: 18px; font-weight: 600; }
+.mode-card .mode-desc { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+.mode-card .mode-stats { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: #64748b; }
+
+/* ===== PROGRESS BAR ===== */
+.progress-bar { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; margin: 8px 0; }
+.progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #00d4ff, #8b5cf6); transition: width 0.6s ease; }
+
+/* ===== SUBJECT TAGS ===== */
+.tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 8px; font-size: 13px; background: rgba(0,212,255,0.1); color: #00d4ff; }
+.tag .tag-remove { cursor: pointer; opacity: 0.6; }
+.tag .tag-remove:hover { opacity: 1; }
+
+/* ===== DASHBOARD STATS ===== */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.stat-card { padding: 16px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+.stat-card .stat-value { font-size: 24px; font-weight: 700; color: #00d4ff; }
+.stat-card .stat-label { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+/* ===== SLEEP COACH ===== */
+.sleep-card { padding: 20px; border-radius: 20px; background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.15); }
+.sleep-card .sleep-time { font-size: 28px; font-weight: 700; color: #a78bfa; }
+.sleep-card .sleep-label { font-size: 13px; color: #94a3b8; }
+.sleep-warning { padding: 12px 16px; border-radius: 12px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.15); color: #fbbf24; font-size: 13px; margin-top: 12px; }
+
+/* ===== SETTINGS ===== */
+.settings-group { margin-bottom: 24px; }
+.settings-group h3 { font-size: 14px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+.setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.setting-row:last-child { border-bottom: none; }
+.setting-row .setting-label { font-size: 14px; color: #e2e8f0; }
+.setting-row .setting-desc { font-size: 12px; color: #64748b; }
+.toggle { width: 44px; height: 24px; border-radius: 12px; background: rgba(255,255,255,0.1); cursor: pointer; position: relative; transition: all 0.3s ease; border: none; }
+.toggle.active { background: #00d4ff; }
+.toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: white; transition: all 0.3s ease; }
+.toggle.active::after { left: 22px; }
+
+/* ===== RESPONSIVE ===== */
+@media (min-width: 768px) {
+  .page-container { padding: 40px 32px 100px; max-width: 800px; }
+  .stat-grid { grid-template-columns: repeat(3, 1fr); }
+  .mode-cards { grid-template-columns: repeat(3, 1fr); }
+  .sound-grid { grid-template-columns: repeat(3, 1fr); }
+  .focus-timer { font-size: 120px; }
+}
+@media (min-width: 1024px) {
+  .main-nav { flex-direction: column; top: 0; right: auto; width: 72px; height: 100vh; padding: 20px 0; border-top: none; border-right: 1px solid rgba(255,255,255,0.06); }
+  .nav-item { padding: 12px 8px; }
+  .nav-item .nav-label { font-size: 9px; }
+  .nav-item.active::after { top: auto; bottom: 0; width: 16px; height: 2px; }
+  .page-container { padding-left: 92px; max-width: 840px; }
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+/* ===== MISC ===== */
+.empty-state { text-align: center; padding: 40px 20px; color: #64748b; }
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+.empty-state p { font-size: 14px; }
+.study-streak { font-size: 36px; font-weight: 700; color: #f59e0b; }
+.readiness-score { font-size: 36px; font-weight: 700; color: #00d4ff; }
+.highlight-cyan { color: #00d4ff; }
+.highlight-violet { color: #a78bfa; }
+.text-muted { color: #64748b; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+.flex { display: flex; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+  </style>
+</head>
+<body>
+  <nav class="main-nav" id="mainNav">
+  <button class="nav-item active" data-page="dashboard">
+    <span class="nav-icon">📊</span>
+    <span class="nav-label">Dashboard</span>
+  </button>
+  <button class="nav-item" data-page="subjects">
+    <span class="nav-icon">📚</span>
+    <span class="nav-label">Subjects</span>
+  </button>
+  <button class="nav-item" data-page="planner">
+    <span class="nav-icon">🤖</span>
+    <span class="nav-label">Plan</span>
+  </button>
+  <button class="nav-item" data-page="timetable">
+    <span class="nav-icon">📋</span>
+    <span class="nav-label">Schedule</span>
+  </button>
+  <button class="nav-item" data-page="focus">
+    <span class="nav-icon">🎯</span>
+    <span class="nav-label">Focus</span>
+  </button>
+  <button class="nav-item" data-page="sounds">
+    <span class="nav-icon">🎵</span>
+    <span class="nav-label">Sounds</span>
+  </button>
+  <button class="nav-item" data-page="settings">
+    <span class="nav-icon">⚙️</span>
+    <span class="nav-label">Settings</span>
+  </button>
+</nav>
+  <div class="app-shell">
+  <main>
+    <div class="page-container">
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Your study overview at a glance</p>
+    <div id="dashboardContent">
+      <div class="empty-state">
+        <div class="empty-icon">🌙</div>
+        <p>Welcome to StudentOS! Add your subjects and generate your first study plan.</p>
+        <button class="btn btn-primary mt-16" onclick="navigateTo('subjects')">Get Started</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBJECTS -->
+  <div class="page" id="page-subjects">
+    <h1 class="page-title">Subjects</h1>
+    <p class="page-subtitle">Add the subjects and topics you're studying</p>
+    <div class="glass-card mb-16">
+      <h3 class="section-title">Add New Subject</h3>
+      <div class="form-group">
+        <label>Subject Name</label>
+        <input class="form-input" id="subjName" placeholder="e.g. Mathematics, Biology" />
+      </div>
+      <div class="form-group">
+        <label>Exam Date</label>
+        <input class="form-input" id="subjExam" type="date" />
+      </div>
+      <div class="form-group">
+        <label>Topics (comma-separated)</label>
+        <input class="form-input" id="subjTopics" placeholder="e.g. Calculus, Vectors, Statistics" />
+      </div>
+      <div class="form-group">
+        <label>Weak Topics (comma-separated)</label>
+        <input class="form-input" id="subjWeak" placeholder="e.g. Vectors, Statistics" />
+      </div>
+      <div class="form-group">
+        <label>Confidence Level (1-10)</label>
+        <input class="form-input" id="subjConfidence" type="range" min="1" max="10" value="5" />
+        <span style="font-size:13px;color:#94a3b8;" id="confidenceVal">5</span>
+      </div>
+      <div class="form-group">
+        <label>Difficulty</label>
+        <select class="form-select" id="subjDifficulty">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Last Revision Date</label>
+        <input class="form-input" id="subjLastRev" type="date" />
+      </div>
+      <div class="form-group">
+        <label>Preferred Study Duration (minutes)</label>
+        <input class="form-input" id="subjDuration" type="number" min="15" max="120" value="30" />
+      </div>
+      <button class="btn btn-primary" onclick="addSubject()">Add Subject</button>
+    </div>
+    <div id="subjectsList"></div>
+  </div>
+
+  <!-- PLANNER -->
+  <div class="page" id="page-planner">
+    <h1 class="page-title">AI Auto Planner</h1>
+    <p class="page-subtitle">Let StudentOS build your optimal study day</p>
+    <div id="plannerContent">
+      <div class="empty-state">
+        <div class="empty-icon">📚</div>
+        <p>Please add at least one subject first.</p>
+        <button class="btn btn-primary mt-16" onclick="navigateTo('subjects')">Add Subjects</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIMETABLE -->
+  <div class="page" id="page-timetable">
+    <h1 class="page-title">Today's Schedule</h1>
+    <p class="page-subtitle">Your AI-generated study timeline</p>
+    <div id="timetableContent">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <p>No schedule yet. Generate your day in the Plan tab.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOCUS -->
+  <div class="page" id="page-focus">
+    <h1 class="page-title">Focus Mode</h1>
+    <p class="page-subtitle">Start an immersive study session</p>
+    <div id="focusContent">
+      <div class="empty-state">
+        <div class="empty-icon">🎯</div>
+        <p>Generate a timetable first, then start sessions from here or the schedule.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOUNDS -->
+  <div class="page" id="page-sounds">
+    <h1 class="page-title">Soundscapes</h1>
+    <p class="page-subtitle">Calming sounds for focus and sleep</p>
+    <div id="soundsContent"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="page" id="page-settings">
+    <h1 class="page-title">Settings</h1>
+    <p class="page-subtitle">Your personal preferences</p>
+    <div id="settingsContent"></div>
+  </div>
+</div>
+    <!-- AGNES:SECTION:features -->
+    <!-- AGNES:SECTION:workflow -->
+    <!-- AGNES:SECTION:templates -->
+    <!-- AGNES:SECTION:testimonials -->
+    <!-- AGNES:SECTION:pricing -->
+    <!-- AGNES:SECTION:faq -->
+  </main>
+</div>
+  <div class="floating-blobs" aria-hidden="true">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Focus Mode Overlay -->
+<div class="focus-overlay" id="focusOverlay">
+  <button class="focus-exit" onclick="exitFocusMode()">✕</button>
+  <div id="focusRunning" style="text-align:center;">
+    <div class="focus-ring">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <defs><linearGradient id="focusGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs>
+        <circle class="bg" cx="80" cy="80" r="70" stroke-width="6"/>
+        <circle class="progress" id="focusProgressRing" cx="80" cy="80" r="70" stroke-width="6" stroke-dasharray="0" stroke-dashoffset="0"/>
+      </svg>
+    </div>
+    <div class="focus-subject" id="focusSubject"></div>
+    <div class="focus-topic" id="focusTopic"></div>
+    <div class="focus-timer" id="focusTimer">25:00</div>
+    <div class="focus-method" id="focusMethod"></div>
+    <div class="focus-instruction" id="focusInstruction"></div>
+  </div>
+  <div id="focusCompleted" class="focus-completed" style="display:none;">
+    <h2>Session Complete! 🎉</h2>
+    <p style="color:#94a3b8;margin:8px 0 16px;">How difficult was this session?</p>
+    <div class="rating-btns">
+      <button class="rating-btn" onclick="rateSession('easy')">Easy</button>
+      <button class="rating-btn" onclick="rateSession('manageable')">Manageable</button>
+      <button class="rating-btn" onclick="rateSession('hard')">Hard</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reschedule Modal -->
+<div id="rescheduleModal" class="modal-overlay" style="display:none;">
+  <div class="modal-content">
+    <h3 class="modal-title">Reschedule Session</h3>
+    <p style="color:#94a3b8;margin-bottom:16px;" id="rescheduleInfo"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="rescheduleAction('next')">Move to Next Slot</button>
+      <button class="btn btn-secondary" onclick="rescheduleAction('tomorrow')">Move to Tomorrow</button>
+      <button class="btn btn-danger" onclick="rescheduleAction('remove')">Remove Today</button>
+      <button class="btn btn-ghost" onclick="closeModal('rescheduleModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+  <script>
+// ===== STUDENTOS - AI AUTO TIME PLANNER =====
+(function() {
+  'use strict';
+
+  // ---- STATE ----
+  let state = {
+    subjects: JSON.parse(localStorage.getItem('studentos_subjects') || '[]'),
+    preferences: JSON.parse(localStorage.getItem('studentos_preferences') || 'null'),
+    timetable: JSON.parse(localStorage.getItem('studentos_timetable') || '[]'),
+    streak: parseInt(localStorage.getItem('studentos_streak') || '0'),
+    confidenceHistory: JSON.parse(localStorage.getItem('studentos_confidence_history') || '{}'),
+    focusSettings: JSON.parse(localStorage.getItem('studentos_focus_settings') || '{}'),
+    currentPage: 'dashboard',
+    focusActive: false,
+    focusTimer: null,
+    focusRemaining: 0,
+    focusTotal: 0,
+    focusSessionIndex: -1,
+    selectedMode: 'balanced',
+    nextId: 1
+  };
+
+  // ---- SOUND ENGINE ----
+  let audioContext = null;
+  let activeSources = {};
+  let soundStates = {};
+
+  function getAudioContext() {
+    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') audioContext.resume();
+    return audioContext;
+  }
+
+  function createNoise(type) {
+    const ctx = getAudioContext();
+    const bufferSize = ctx.sampleRate * 2;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let lastOut = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      if (type === 'pink') {
+        const white = Math.random() * 2 - 1;
+        lastOut += (white - lastOut) * 0.02;
+        data[i] = lastOut * 0.5;
+      } else if (type === 'brown') {
+        const white = Math.random() * 2 - 1;
+        lastOut += (white - lastOut) * 0.1;
+        if (lastOut > 1) lastOut = 1;
+        if (lastOut < -1) lastOut = -1;
+        data[i] = lastOut * 0.4;
+      } else {
+        data[i] = Math.random() * 2 - 1;
+      }
+    }
+    return buffer;
+  }
+
+  function startSound(id, type, label) {
+    try {
+      if (soundStates[id] && soundStates[id].playing) return;
+      const ctx = getAudioContext();
+      let source, gain = ctx.createGain();
+      gain.gain.value = soundStates[id]?.volume || 0.3;
+
+      if (type === 'piano') {
+        // Simple piano tone using oscillator
+        const osc = ctx.createOscillator();
+        const noteGain = ctx.createGain();
+        const waveTypes = ['sine', 'triangle', 'sine', 'triangle'];
+        const freqs = [261.63, 329.63, 392.00, 523.25];
+        const notes = [];
+        for (let i = 0; i < 4; i++) {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = waveTypes[i];
+          o.frequency.value = freqs[i];
+          g.gain.value = 0.08;
+          o.connect(g);
+          g.connect(gain);
+          o.start();
+          notes.push({ o, g });
+        }
+        source = { stop: () => notes.forEach(n => { try { n.o.stop(); } catch(e) {} }) };
+        soundStates[id] = { playing: true, source: notes, gain, type, label, volume: 0.3, loop: true };
+      } else if (type === 'lofi') {
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = 130.81;
+        const lofiGain = ctx.createGain();
+        lofiGain.gain.value = 0.06;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 400;
+        osc.connect(filter);
+        filter.connect(lofiGain);
+        lofiGain.connect(gain);
+        osc.start();
+        source = osc;
+        soundStates[id] = { playing: true, source: [{o: osc, g: lofiGain}], gain, type, label, volume: 0.3, loop: true };
+      } else if (type === 'ambient') {
+        const buffer = createNoise('pink');
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.loop = true;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 800;
+        filter.Q.value = 0.5;
+        src.connect(filter);
+        filter.connect(gain);
+        src.start();
+        source = src;
+        soundStates[id] = { playing: true, source: src, gain, type, label, volume: 0.3, loop: true };
+      } else if (type === 'deepfocus') {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 90;
+        const dGain = ctx.createGain();
+        dGain.gain.value = 0.15;
+        osc.connect(dGain);
+        dGain.connect(gain);
+        osc.start();
+        source = osc;
+        soundStates[id] = { playing: true, source: [{o: osc, g: dGain}], gain, type, label, volume: 0.3, loop: true };
+      } else if (type === 'rain') {
+        const buffer = createNoise('white');
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.loop = true;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 2000;
+        src.connect(filter);
+        filter.connect(gain);
+        src.start();
+        source = src;
+        soundStates[id] = { playing: true, source: src, gain, type, label, volume: 0.25, loop: true };
+      } else if (type === 'ocean') {
+        const buffer = createNoise('brown');
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.loop = true;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 400;
+        const lfo = ctx.createOscillator();
+        lfo.frequency.value = 0.1;
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.value = 0.08;
+        lfo.connect(lfoGain);
+        lfoGain.connect(gain.gain);
+        lfo.start();
+        src.connect(filter);
+        filter.connect(gain);
+        src.start();
+        source = src;
+        soundStates[id] = { playing: true, source: src, gain, type, label, volume: 0.25, loop: true, lfo };
+      } else if (type === 'fan') {
+        const buffer = createNoise('pink');
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.loop = true;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 2000;
+        filter.Q.value = 1;
+        src.connect(filter);
+        filter.connect(gain);
+        src.start();
+        source = src;
+        soundStates[id] = { playing: true, source: src, gain, type, label, volume: 0.2, loop: true };
+      } else if (type === 'pinknoise') {
+        const buffer = createNoise('pink');
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.loop = true;
+        src.connect(gain);
+        src.start();
+        source = src;
+        soundStates[id] = { playing: true, source: src, gain, type, label, volume: 0.2, loop: true };
+      } else if (type === 'brownnoise') {
+        const buffer = createNoise('brown');
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.loop = true;
+        src.connect(gain);
+        src.start();
+        source = src;
+        soundStates[id] = { playing: true, source: src, gain, type, label, volume: 0.2, loop: true };
+      } else if (type === 'fireplace') {
+        const buffer = createNoise('brown');
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.loop = true;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 300;
+        const crackle = ctx.createOscillator();
+        crackle.type = 'sawtooth';
+        crackle.frequency.value = 20;
+        const cGain = ctx.createGain();
+        cGain.gain.value = 0.04;
+        crackle.connect(cGain);
+        cGain.connect(gain);
+        crackle.start();
+        src.connect(filter);
+        filter.connect(gain);
+        src.start();
+        source = src;
+        soundStates[id] = { playing: true, source: src, gain, type, label, volume: 0.25, loop: true, crackle };
+      }
+
+      gain.connect(ctx.destination);
+      if (!soundStates[id]) {
+        soundStates[id] = { playing: true, source: source || src, gain, type, label, volume: 0.3, loop: true };
+      }
+      soundStates[id].playing = true;
+      updateSoundUI();
+    } catch(e) {
+      console.warn('Sound error:', e);
+    }
+  }
+
+  function stopSound(id) {
+    const s = soundStates[id];
+    if (!s) return;
+    s.playing = false;
+    if (s.source) {
+      if (Array.isArray(s.source)) {
+        s.source.forEach(item => { try { item.o?.stop(); } catch(e) {} });
+      } else {
+        try { s.source.stop(); } catch(e) {}
+      }
+    }
+    if (s.lfo) try { s.lfo.stop(); } catch(e) {}
+    if (s.crackle) try { s.crackle.stop(); } catch(e) {}
+    soundStates[id] = { ...s, playing: false, source: null, lfo: null, crackle: null };
+    updateSoundUI();
+  }
+
+  function setSoundVolume(id, vol) {
+    if (soundStates[id] && soundStates[id].gain) {
+      soundStates[id].gain.gain.value = vol;
+      soundStates[id].volume = vol;
+    }
+  }
+
+  function toggleSoundLoop(id) {
+    if (soundStates[id]) {
+      soundStates[id].loop = !soundStates[id].loop;
+      updateSoundUI();
+    }
+  }
+
+  function updateSoundUI() {
+    document.querySelectorAll('.sound-card').forEach(card => {
+      const id = card.dataset.soundId;
+      const s = soundStates[id];
+      if (!s) return;
+      const playBtn = card.querySelector('.sound-play');
+      if (playBtn) playBtn.textContent = s.playing ? '⏸' : '▶';
+      if (s.playing) card.querySelector('.sound-play')?.classList.add('playing');
+      else card.querySelector('.sound-play')?.classList.remove('playing');
+      const loopBtn = card.querySelector('.sound-loop');
+      if (loopBtn) loopBtn.style.opacity = s.loop ? '1' : '0.4';
+    });
+  }
+
+  // ---- NAVIGATION ----
+  window.navigateTo = function(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const pageEl = document.getElementById('page-' + page);
+    if (pageEl) pageEl.classList.add('active');
+    const navEl = document.querySelector(`.nav-item[data-page="${page}"]`);
+    if (navEl) navEl.classList.add('active');
+    state.currentPage = page;
+    renderPage(page);
+  };
+
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      navigateTo(item.dataset.page);
+    });
+  });
+
+  // ---- TOAST ----
+  window.showToast = function(msg) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 3000);
+  };
+
+  // ---- MODAL ----
+  window.closeModal = function(id) {
+    document.getElementById(id).style.display = 'none';
+  };
+
+  // ---- SUBJECTS ----
+  window.addSubject = function() {
+    const name = document.getElementById('subjName').value.trim();
+    const exam = document.getElementById('subjExam').value;
+    const topicsStr = document.getElementById('subjTopics').value.trim();
+    const weakStr = document.getElementById('subjWeak').value.trim();
+    const confidence = parseInt(document.getElementById('subjConfidence').value);
+    const difficulty = document.getElementById('subjDifficulty').value;
+    const lastRev = document.getElementById('subjLastRev').value;
+    const duration = parseInt(document.getElementById('subjDuration').value) || 30;
+
+    if (!name) { showToast('Please enter a subject name'); return; }
+    if (!exam) { showToast('Please select an exam date'); return; }
+
+    const topics = topicsStr ? topicsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+    const weakTopics = weakStr ? weakStr.split(',').map(t => t.trim()).filter(t => t) : [];
+
+    const subject = {
+      id: Date.now() + Math.random() * 1000,
+      name, exam, topics, weakTopics, confidence, difficulty, lastRev, duration,
+      createdAt: new Date().toISOString()
+    };
+
+    state.subjects.push(subject);
+    saveSubjects();
+    document.getElementById('subjName').value = '';
+    document.getElementById('subjExam').value = '';
+    document.getElementById('subjTopics').value = '';
+    document.getElementById('subjWeak').value = '';
+    document.getElementById('subjConfidence').value = '5';
+    document.getElementById('subjLastRev').value = '';
+    document.getElementById('subjDuration').value = '30';
+    document.getElementById('confidenceVal').textContent = '5';
+    showToast('Subject added!');
+    renderSubjects();
+    renderAllPages();
+  };
+
+  window.removeSubject = function(id) {
+    state.subjects = state.subjects.filter(s => s.id !== id);
+    saveSubjects();
+    renderSubjects();
+    renderAllPages();
+    showToast('Subject removed');
+  };
+
+  function saveSubjects() {
+    localStorage.setItem('studentos_subjects', JSON.stringify(state.subjects));
+  }
+
+  function renderSubjects() {
+    const list = document.getElementById('subjectsList');
+    if (state.subjects.length === 0) {
+      list.innerHTML = `<div class="empty-state"><p>No subjects added yet.</p></div>`;
+      return;
+    }
+    list.innerHTML = state.subjects.map(s => `
+      <div class="glass-card mb-8" style="animation:slideUp 0.3s ease;">
+        <div class="flex items-center justify-between">
+          <div>
+            <strong style="font-size:16px;">${escHtml(s.name)}</strong>
+            <span style="font-size:13px;color:#64748b;margin-left:8px;">📅 ${s.exam}</span>
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="removeSubject(${s.id})">✕</button>
+        </div>
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
+          ${s.topics.map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}
+        </div>
+        <div style="margin-top:8px;font-size:13px;color:#94a3b8;">
+          Confidence: ${'★'.repeat(Math.min(s.confidence,5))}${'☆'.repeat(Math.max(5-Math.min(s.confidence,5),0))}
+          &middot; ${s.difficulty} &middot; ${s.duration}min sessions
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ---- PREFERENCES ----
+  function getPreferences() {
+    const stored = localStorage.getItem('studentos_preferences');
+    if (stored) {
+      try { return JSON.parse(stored); } catch(e) {}
+    }
+    return {
+      availableHours: 6,
+      wakeTime: '07:00',
+      sleepDuration: 8,
+      windDown: 30,
+      stopBuffer: 30,
+      breakDuration: 10,
+      intensity: 'balanced',
+      studyBlockLength: 30,
+      longBreakFrequency: 3,
+      defaultFocusMusic: '',
+      defaultSleepSound: '',
+      calendarExport: true,
+      protectSleep: true,
+      autoReschedule: true,
+      animationIntensity: 'high',
+      theme: 'navy'
+    };
+  }
+
+  function savePreferences(prefs) {
+    localStorage.setItem('studentos_preferences', JSON.stringify(prefs));
+    state.preferences = prefs;
+  }
+
+  // ---- PLANNER ENGINE ----
+  window.selectMode = function(mode) {
+    state.selectedMode = mode;
+    document.querySelectorAll('.mode-card').forEach(c => c.classList.toggle('selected', c.dataset.mode === mode));
+  };
+
+  function generateReason(session, subject) {
+    const reasons = [];
+    if (session.method === 'Active Recall') {
+      reasons.push(`This topic appears first because your confidence is lowest and your exam is approaching.`);
+    }
+    if (session.method === 'Spaced Repetition') {
+      const daysSince = subject.lastRev ? Math.floor((new Date() - new Date(subject.lastRev)) / (1000*60*60*24)) : 7;
+      reasons.push(`This review session uses spaced repetition because it has been ${daysSince} days since your previous revision.`);
+    }
+    if (session.method === 'Interleaving') {
+      reasons.push(`Switching subjects improves long-term understanding and prevents mental fatigue.`);
+    }
+    if (session.method === 'Practice Questions') {
+      reasons.push(`Active application reinforces knowledge better than passive review.`);
+    }
+    if (session.method === 'Self Test') {
+      reasons.push(`Testing yourself under exam conditions builds confidence and identifies gaps.`);
+    }
+    if (session.method === 'Light Review') {
+      reasons.push(`Ending with light review helps consolidate today's learning without cognitive overload.`);
+    }
+    if (reasons.length === 0) {
+      reasons.push(`This session is strategically placed for optimal learning progression.`);
+    }
+    if (session.timeSlot && parseInt(session.timeSlot.split(':')[0]) < 10) {
+      reasons.push(`This subject is placed in the morning because it requires the highest concentration.`);
+    }
+    return reasons[0];
+  }
+
+  window.generateTimetable = function() {
+    if (state.subjects.length === 0) {
+      showToast('Add at least one subject first');
+      return;
+    }
+
+    const prefs = getPreferences();
+    const mode = state.selectedMode || prefs.intensity || 'balanced';
+
+    let numSessions, focusDuration, breakDuration;
+    if (mode === 'chill') {
+      numSessions = 3; focusDuration = 25; breakDuration = 12;
+    } else if (mode === 'grind') {
+      numSessions = 6; focusDuration = 42; breakDuration = 12;
+    } else {
+      numSessions = 4; focusDuration = 28; breakDuration = 10;
+    }
+
+    // Sort subjects by urgency (low confidence + approaching exam = high priority)
+    const sorted = [...state.subjects].sort((a, b) => {
+      const daysUntilA = (new Date(a.exam) - new Date()) / (1000*60*60*24);
+      const daysUntilB = (new Date(b.exam) - new Date()) / (1000*60*60*24);
+      const urgencyA = (11 - a.confidence) * (1 / Math.max(daysUntilA, 1));
+      const urgencyB = (11 - b.confidence) * (1 / Math.max(daysUntilB, 1));
+      return urgencyB - urgencyA;
+    });
+
+    const wakeParts = prefs.wakeTime.split(':').map(Number);
+    const wakeMin = wakeParts[0] * 60 + wakeParts[1];
+    const availMin = prefs.availableHours * 60;
+    const totalSessionTime = numSessions * focusDuration;
+    const totalBreakTime = (numSessions - 1) * prefs.breakDuration + (numSessions >= 3 ? 40 : 20); // meal buffers
+    const neededTime = totalSessionTime + totalBreakTime;
+    const startMin = wakeMin + 30; // start 30min after waking
+
+    const bedtimeMin = calculateBedtime(wakeMin, prefs.sleepDuration);
+    const stopStudyMin = bedtimeMin - prefs.stopBuffer;
+    const maxEnd = Math.min(stopStudyMin, startMin + availMin);
+
+    const timetable = [];
+    let currentMin = startMin;
+    let sessionCount = 0;
+    let prevSubjectId = null;
+
+    const methods = ['Active Recall', 'Practice Questions', 'Interleaving', 'Spaced Repetition', 'Self Test', 'Light Review'];
+
+    for (let i = 0; i < numSessions; i++) {
+      if (currentMin + focusDuration > maxEnd) break;
+
+      // Pick subject
+      let subject;
+      if (i === 0) {
+        subject = sorted[0]; // hardest/most urgent first
+      } else if (i === 2 && sorted.length > 1) {
+        subject = sorted[1]; // different subject for interleaving
+      } else if (i === 3 && sorted.length > 2) {
+        subject = sorted[2];
+      } else {
+        // alternate subjects
+        const candidates = sorted.filter(s => s.id !== prevSubjectId);
+        subject = candidates.length > 0 ? candidates[i % candidates.length] : sorted[i % sorted.length];
+      }
+      if (!subject) subject = sorted[i % sorted.length];
+
+      // Pick topic
+      let topic;
+      const weakTopics = subject.weakTopics || [];
+      const allTopics = subject.topics || [];
+      if (i === 0 && weakTopics.length > 0) {
+        topic = weakTopics[0]; // weakest topic first
+      } else if (allTopics.length > 0) {
+        topic = allTopics[i % allTopics.length];
+      } else {
+        topic = 'Main topics';
+      }
+
+      // Pick method
+      const method = i < methods.length ? methods[i] : methods[i % methods.length];
+
+      const methodInstructions = {
+        'Active Recall': 'Close your notes and write down everything you remember before checking.',
+        'Practice Questions': 'Attempt questions before reading the solutions.',
+        'Interleaving': 'Switch subjects to improve long-term understanding.',
+        'Spaced Repetition': 'Review information before forgetting begins.',
+        'Self Test': 'Simulate exam conditions and answer without help.',
+        'Light Review': 'Summarize key ideas without introducing difficult new concepts.'
+      };
+
+      const session = {
+        id: state.nextId++,
+        type: 'study',
+        subjectId: subject.id,
+        subjectName: subject.name,
+        topic: topic,
+        method: method,
+        instruction: methodInstructions[method] || 'Focus on understanding the material.',
+        duration: focusDuration,
+        startMin: currentMin,
+        endMin: currentMin + focusDuration,
+        completed: false,
+        skipped: false,
+        status: 'pending',
+        reasoning: ''
+      };
+      session.reasoning = generateReason(session, subject);
+      timetable.push(session);
+
+      prevSubjectId = subject.id;
+      currentMin += focusDuration;
+      sessionCount++;
+
+      // Add break after each session except last
+      if (i < numSessions - 1) {
+        let breakType = 'short';
+        let breakLen = prefs.breakDuration || breakDuration;
+
+        // Insert meal breaks after session 2 and 4
+        if (sessionCount === 2) {
+          breakType = 'lunch';
+          breakLen = 25;
+        } else if (sessionCount === 4) {
+          breakType = 'dinner';
+          breakLen = 25;
+        }
+
+        timetable.push({
+          id: state.nextId++,
+          type: breakType === 'lunch' || breakType === 'dinner' ? 'meal' : 'break',
+          breakType: breakType,
+          duration: breakLen,
+          startMin: currentMin,
+          endMin: currentMin + breakLen,
+          completed: false,
+          skipped: false,
+          status: 'pending',
+          label: breakType === 'lunch' ? '🍝 Lunch Break' : breakType === 'dinner' ? '🍽️ Dinner Break' : '☕ Short Break'
+        });
+        currentMin += breakLen;
+      }
+    }
+
+    // Check if end is too close to bedtime
+    if (currentMin + prefs.windDown > stopStudyMin && prefs.protectSleep) {
+      // Auto-shift sessions earlier if possible
+      const overrun = (currentMin + prefs.windDown) - stopStudyMin;
+      if (overrun > 15) {
+        showToast('Sessions adjusted to protect your sleep. Review the schedule.');
+      }
+    }
+
+    // Add wind-down and bedtime as informational blocks
+    const windDownStart = Math.max(currentMin, stopStudyMin - prefs.windDown);
+    timetable.push({
+      id: state.nextId++,
+      type: 'winddown',
+      duration: prefs.windDown,
+      startMin: windDownStart,
+      endMin: windDownStart + prefs.windDown,
+      completed: false,
+      skipped: false,
+      status: 'pending',
+      label: '🌙 Wind Down'
+    });
+
+    const bedMin = windDownStart + prefs.windDown;
+    timetable.push({
+      id: state.nextId++,
+      type: 'bedtime',
+      duration: prefs.sleepDuration * 60,
+      startMin: bedMin,
+      endMin: bedMin + prefs.sleepDuration * 60,
+      completed: false,
+      skipped: false,
+      status: 'pending',
+      label: '😴 Bedtime'
+    });
+
+    state.timetable = timetable;
+    localStorage.setItem('studentos_timetable', JSON.stringify(timetable));
+
+    // Update streak
+    const today = new Date().toDateString();
+    const lastActive = localStorage.getItem('studentos_last_active');
+    if (lastActive !== today) {
+      state.streak++;
+      localStorage.setItem('studentos_streak', String(state.streak));
+      localStorage.setItem('studentos_last_active', today);
+    }
+
+    showToast('Study plan generated! 🎉');
+    renderAllPages();
+    navigateTo('timetable');
+  };
+
+  function calculateBedtime(wakeMin, sleepHours) {
+    let bedMin = wakeMin - sleepHours * 60;
+    if (bedMin < 0) bedMin += 24 * 60;
+    return bedMin;
+  }
+
+  function formatTime(minutes) {
+    const h = Math.floor(minutes / 60) % 24;
+    const m = minutes % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  function formatAmPm(minutes) {
+    const h = Math.floor(minutes / 60) % 24;
+    const m = minutes % 60;
+    const period = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+  }
+
+  // ---- RESCHEDULE ----
+  let rescheduleTargetId = null;
+
+  window.skipSession = function(id) {
+    rescheduleTargetId = id;
+    const session = state.timetable.find(s => s.id === id);
+    if (!session) return;
+    document.getElementById('rescheduleInfo').textContent =
+      `How would you like to reschedule "${session.subjectName || session.label}" (${session.topic || ''})?`;
+    document.getElementById('rescheduleModal').style.display = 'flex';
+  };
+
+  window.rescheduleAction = function(action) {
+    const idx = state.timetable.findIndex(s => s.id === rescheduleTargetId);
+    if (idx === -1) { closeModal('rescheduleModal'); return; }
+
+    const session = state.timetable[idx];
+    if (action === 'remove') {
+      state.timetable.splice(idx, 1);
+      showToast('Session removed');
+    } else if (action === 'next') {
+      // Move to next available slot (after last session, before wind-down)
+      const lastSession = [...state.timetable].reverse().find(s => s.type === 'study');
+      if (lastSession && session.type === 'study') {
+        const gap = lastSession.endMin + 15;
+        const winddown = state.timetable.find(s => s.type === 'winddown');
+        if (winddown && gap + session.duration < winddown.startMin) {
+          session.startMin = gap;
+          session.endMin = gap + session.duration;
+          session.skipped = false;
+          showToast('Moved to next slot');
+        } else {
+          showToast('No available slot before wind-down. Try tomorrow.');
+        }
+      }
+    } else if (action === 'tomorrow') {
+      // Keep in timetable but mark for tomorrow
+      session.rescheduledTomorrow = true;
+      session.skipped = false;
+      showToast('Moved to tomorrow');
+    }
+
+    localStorage.setItem('studentos_timetable', JSON.stringify(state.timetable));
+    closeModal('rescheduleModal');
+    renderTimetable();
+  };
+
+  // ---- FOCUS MODE ----
+  window.startFocusFromTimetable = function(id) {
+    const session = state.timetable.find(s => s.id === id);
+    if (!session) return;
+    startFocusSession(session);
+  };
+
+  window.startFocusSession = function(session) {
+    const overlay = document.getElementById('focusOverlay');
+    overlay.classList.add('active');
+
+    document.getElementById('focusRunning').style.display = 'block';
+    document.getElementById('focusCompleted').style.display = 'none';
+    document.getElementById('focusSubject').textContent = session.subjectName || 'Study Session';
+    document.getElementById('focusTopic').textContent = session.topic || '';
+    document.getElementById('focusMethod').textContent = session.method || 'Focus';
+    document.getElementById('focusInstruction').textContent = session.instruction || 'Stay focused and do your best.';
+
+    state.focusActive = true;
+    state.focusSessionIndex = state.timetable.indexOf(session);
+    state.focusTotal = (session.duration || 25) * 60;
+    state.focusRemaining = state.focusTotal;
+
+    const circumference = 2 * Math.PI * 70;
+    const ring = document.getElementById('focusProgressRing');
+    ring.style.strokeDasharray = circumference;
+    ring.style.strokeDashoffset = '0';
+
+    updateFocusTimer();
+    if (state.focusTimer) clearInterval(state.focusTimer);
+    state.focusTimer = setInterval(() => {
+      state.focusRemaining--;
+      if (state.focusRemaining <= 0) {
+        clearInterval(state.focusTimer);
+        state.focusTimer = null;
+        finishFocusSession();
+      }
+      updateFocusTimer();
+    }, 1000);
+
+    // Hide other UI
+    document.querySelector('.main-nav').style.display = 'none';
+    document.querySelectorAll('.page').forEach(p => p.style.opacity = '0');
+  };
+
+  function updateFocusTimer() {
+    const mins = Math.floor(state.focusRemaining / 60);
+    const secs = state.focusRemaining % 60;
+    document.getElementById('focusTimer').textContent =
+      `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+    const circumference = 2 * Math.PI * 70;
+    const offset = circumference * (1 - state.focusRemaining / state.focusTotal);
+    document.getElementById('focusProgressRing').style.strokeDashoffset = offset;
+  }
+
+  function finishFocusSession() {
+    document.getElementById('focusRunning').style.display = 'none';
+    document.getElementById('focusCompleted').style.display = 'block';
+  }
+
+  window.rateSession = function(rating) {
+    const idx = state.focusSessionIndex;
+    if (idx >= 0 && idx < state.timetable.length) {
+      state.timetable[idx].completed = true;
+      state.timetable[idx].rating = rating;
+      localStorage.setItem('studentos_timetable', JSON.stringify(state.timetable));
+
+      // Update confidence
+      const session = state.timetable[idx];
+      if (session.subjectId) {
+        const subj = state.subjects.find(s => s.id === session.subjectId);
+        if (subj) {
+          if (rating === 'easy') subj.confidence = Math.min(10, subj.confidence + 1);
+          else if (rating === 'hard') subj.confidence = Math.max(1, subj.confidence - 1);
+          saveSubjects();
+        }
+      }
+    }
+    exitFocusMode();
+    showToast('Session recorded! 📝');
+    renderAllPages();
+  };
+
+  window.exitFocusMode = function() {
+    if (state.focusTimer) { clearInterval(state.focusTimer); state.focusTimer = null; }
+    document.getElementById('focusOverlay').classList.remove('active');
+    state.focusActive = false;
+    document.querySelector('.main-nav').style.display = 'flex';
+    document.querySelectorAll('.page').forEach(p => p.style.opacity = '1');
+  };
+
+  // ---- SLEEP COACH ----
+  function calculateSleep(prefs) {
+    const wakeParts = prefs.wakeTime.split(':').map(Number);
+    const wakeMin = wakeParts[0] * 60 + wakeParts[1];
+    const sleepMin = prefs.sleepDuration * 60;
+    let bedMin = wakeMin - sleepMin;
+    if (bedMin < 0) bedMin += 24 * 60;
+    const windDownMin = bedMin - prefs.windDown;
+    let stopStudyMin = bedMin - prefs.stopBuffer;
+    if (stopStudyMin < 0) stopStudyMin += 24 * 60;
+
+    return {
+      bedtime: formatTime(bedMin),
+      bedtimeAmPm: formatAmPm(bedMin),
+      windDown: formatTime(windDownMin),
+      windDownAmPm: formatAmPm(windDownMin),
+      stopStudying: formatTime(stopStudyMin),
+      stopStudyingAmPm: formatAmPm(stopStudyMin),
+      expectedSleep: prefs.sleepDuration,
+      wakeTime: prefs.wakeTime,
+      isWarning: prefs.sleepDuration < 7
+    };
+  }
+
+  // ---- ICS EXPORT ----
+  window.exportICS = function() {
+    const prefs = getPreferences();
+    const sleep = calculateSleep(prefs);
+    let ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//StudentOS//AI Planner//EN',
+      'CALSCALE:GREGORIAN'
+    ];
+
+    const today = new Date();
+    const dateStr = today.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+    state.timetable.forEach(session => {
+      const startDate = new Date(today);
+      startDate.setHours(Math.floor(session.startMin / 60), session.startMin % 60, 0);
+      const endDate = new Date(today);
+      endDate.setHours(Math.floor(session.endMin / 60), session.endMin % 60, 0);
+
+      const dtStart = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const dtEnd = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+      let summary = '';
+      if (session.type === 'study') {
+        summary = `Study: ${session.subjectName} - ${session.topic} (${session.method})`;
+      } else if (session.type === 'break') {
+        summary = session.label || 'Break';
+      } else if (session.type === 'meal') {
+        summary = session.label || 'Meal Break';
+      } else if (session.type === 'winddown') {
+        summary = '🌙 Wind Down';
+      } else if (session.type === 'bedtime') {
+        summary = '😴 Sleep';
+      }
+
+      ics.push('BEGIN:VEVENT');
+      ics.push(`DTSTART:${dtStart}`);
+      ics.push(`DTEND:${dtEnd}`);
+      ics.push(`SUMMARY:${summary}`);
+      ics.push('END:VEVENT');
+    });
+
+    // Add wind-down and bedtime
+    if (prefs.calendarExport) {
+      const wdDate = new Date(today);
+      const wdParts = sleep.windDown.split(':').map(Number);
+      wdDate.setHours(wdParts[0], wdParts[1], 0);
+      const wdEnd = new Date(wdDate);
+      wdEnd.setMinutes(wdEnd.getMinutes() + prefs.windDown);
+      ics.push('BEGIN:VEVENT');
+      ics.push(`DTSTART:${wdDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
+      ics.push(`DTEND:${wdEnd.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
+      ics.push('SUMMARY:🌙 Wind Down');
+      ics.push('DESCRIPTION:Begin winding down for sleep');
+      ics.push('END:VEVENT');
+
+      const bedDate = new Date(today);
+      const bedParts = sleep.bedtime.split(':').map(Number);
+      bedDate.setHours(bedParts[0], bedParts[1], 0);
+      const bedEnd = new Date(bedDate);
+      bedEnd.setHours(bedEnd.getHours() + prefs.sleepDuration);
+      ics.push('BEGIN:VEVENT');
+      ics.push(`DTSTART:${bedDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
+      ics.push(`DTEND:${bedEnd.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
+      ics.push('SUMMARY:😴 Sleep');
+      ics.push('END:VEVENT');
+    }
+
+    ics.push('END:VCALENDAR');
+
+    const blob = new Blob([ics.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `studentos-schedule-${today.toISOString().split('T')[0]}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Calendar exported! 📅');
+  };
+
+  // ---- SETTINGS ----
+  window.saveSettings = function() {
+    const prefs = getPreferences();
+    prefs.intensity = document.getElementById('settingMode').value;
+    prefs.studyBlockLength = parseInt(document.getElementById('settingBlockLen').value) || 30;
+    prefs.breakDuration = parseInt(document.getElementById('settingBreakLen').value) || 10;
+    prefs.longBreakFrequency = parseInt(document.getElementById('settingLongFreq').value) || 3;
+    prefs.sleepDuration = parseFloat(document.getElementById('settingSleep').value) || 8;
+    prefs.wakeTime = document.getElementById('settingWake').value || '07:00';
+    prefs.windDown = parseInt(document.getElementById('settingWindDown').value) || 30;
+    prefs.stopBuffer = parseInt(document.getElementById('settingStopBuf').value) || 30;
+    prefs.protectSleep = document.getElementById('settingProtect').classList.contains('active');
+    prefs.autoReschedule = document.getElementById('settingAuto').classList.contains('active');
+    prefs.calendarExport = document.getElementById('settingCal').classList.contains('active');
+    prefs.animationIntensity = document.getElementById('settingAnim').value;
+
+    savePreferences(prefs);
+    showToast('Settings saved!');
+    renderAllPages();
+  };
+
+  window.toggleSetting = function(id) {
+    document.getElementById(id).classList.toggle('active');
+  };
+
+  window.exportData = function() {
+    const data = {
+      subjects: state.subjects,
+      preferences: state.preferences,
+      timetable: state.timetable,
+      streak: state.streak,
+      exportedAt: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `studentos-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Data exported!');
+  };
+
+  window.resetData = function() {
+    if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
+      if (confirm('This will delete all subjects, timetables, and preferences. Continue?')) {
+        localStorage.clear();
+        state.subjects = [];
+        state.timetable = [];
+        state.streak = 0;
+        state.preferences = null;
+        renderAllPages();
+        showToast('All data has been reset');
+      }
+    }
+  };
+
+  // ---- RENDER FUNCTIONS ----
+  function renderAllPages() {
+    renderDashboard();
+    renderSubjects();
+    renderPlanner();
+    renderTimetable();
+    renderFocusPage();
+    renderSounds();
+    renderSettings();
+  }
+
+  function renderDashboard() {
+    const prefs = getPreferences();
+    const sleep = calculateSleep(prefs);
+    const todayTimetable = state.timetable;
+    const nextSession = todayTimetable.find(s => !s.completed && !s.skipped && s.type === 'study');
+    const completedCount = todayTimetable.filter(s => s.completed).length;
+    const totalStudySessions = todayTimetable.filter(s => s.type === 'study').length;
+    const progress = totalStudySessions > 0 ? Math.round((completedCount / totalStudySessions) * 100) : 0;
+
+    // Nearest exam
+    let nearestExam = null;
+    if (state.subjects.length > 0) {
+      const sortedExams = [...state.subjects].sort((a, b) => new Date(a.exam) - new Date(b.exam));
+      nearestExam = sortedExams[0];
+    }
+
+    // Readiness score
+    const avgConfidence = state.subjects.length > 0
+      ? Math.round(state.subjects.reduce((sum, s) => sum + s.confidence, 0) / state.subjects.length * 10)
+      : 0;
+
+    const container = document.getElementById('dashboardContent');
+    container.innerHTML = `
+      ${state.subjects.length === 0 ? `<div class="empty-state"><div class="empty-icon">🌙</div><p>Welcome to StudentOS! Add your subjects and generate your first study plan.</p><button class="btn btn-primary mt-16" onclick="navigateTo('subjects')">Get Started</button></div>` : `
+      <div class="stat-grid mb-16">
+        <div class="stat-card">
+          <div class="stat-value">${nextSession ? formatAmPm(nextSession.startMin) : '—'}</div>
+          <div class="stat-label">Next Study Block</div>
+          ${nextSession ? `<div style="font-size:12px;color:#94a3b8;margin-top:4px;">${nextSession.subjectName} · ${nextSession.topic}</div>` : ''}
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${progress}%</div>
+          <div class="stat-label">Today's Progress</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value readiness-score">${avgConfidence}%</div>
+          <div class="stat-label">Overall Readiness</div>
+        </div>
+      </div>
+      <div class="stat-grid mb-16">
+        ${nearestExam ? `<div class="stat-card">
+          <div class="stat-value" style="color:#f59e0b;">${Math.ceil((new Date(nearestExam.exam) - new Date()) / (1000*60*60*24))}d</div>
+          <div class="stat-label">Until ${escHtml(nearestExam.name)} Exam</div>
+        </div>` : ''}
+        <div class="stat-card">
+          <div class="stat-value study-streak">${state.streak} 🔥</div>
+          <div class="stat-label">Day Streak</div>
+        </div>
+        <div class="stat-card">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span style="font-size:13px;color:#64748b;">Mode</span>
+            <span style="font-size:14px;font-weight:600;color:#00d4ff;text-transform:capitalize;">${state.selectedMode || prefs.intensity || 'balanced'}</span>
+          </div>
+        </div>
+      </div>
+      ${sleep.isWarning ? `<div class="sleep-warning">Sleeping less than seven hours reduces memory consolidation, concentration and learning efficiency. StudentOS recommends increasing your sleep duration.</div>` : ''}
+      <div class="sleep-card mt-16">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div style="text-align:center;"><div class="sleep-time">${sleep.bedtimeAmPm}</div><div class="sleep-label">Bedtime</div></div>
+          <div style="text-align:center;"><div class="sleep-time">${sleep.windDownAmPm}</div><div class="sleep-label">Wind Down</div></div>
+          <div style="text-align:center;"><div class="sleep-time">${sleep.stopStudyingAmPm}</div><div class="sleep-label">Stop Studying</div></div>
+        </div>
+        <div style="text-align:center;margin-top:12px;font-size:14px;color:#a78bfa;">Expected Sleep: ${sleep.expectedSleep} hours</div>
+      </div>
+      `}
+    `;
+  }
+
+  function renderPlanner() {
+    const container = document.getElementById('plannerContent');
+    if (state.subjects.length === 0) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📚</div><p>Please add at least one subject first.</p><button class="btn btn-primary mt-16" onclick="navigateTo('subjects')">Add Subjects</button></div>`;
+      return;
+    }
+
+    const prefs = getPreferences();
+    container.innerHTML = `
+      <div class="glass-card mb-16">
+        <h3 class="section-title">Planning Preferences</h3>
+        <div class="form-group">
+          <label>Available Study Hours Today</label>
+          <input class="form-input" id="planHours" type="number" min="1" max="16" value="${prefs.availableHours}" />
+        </div>
+        <div class="form-group">
+          <label>Wake Up Time</label>
+          <input class="form-input" id="planWake" type="time" value="${prefs.wakeTime}" />
+        </div>
+        <div class="form-group">
+          <label>Target Sleep Duration (hours)</label>
+          <input class="form-input" id="planSleep" type="number" min="5" max="12" step="0.5" value="${prefs.sleepDuration}" />
+        </div>
+        <div class="form-group">
+          <label>Wind-Down Duration (minutes)</label>
+          <input class="form-input" id="planWindDown" type="number" min="15" max="90" value="${prefs.windDown}" />
+        </div>
+        <div class="form-group">
+          <label>Stop Studying Buffer Before Bed (minutes)</label>
+          <input class="form-input" id="planStopBuf" type="number" min="15" max="120" value="${prefs.stopBuffer}" />
+        </div>
+        <div class="form-group">
+          <label>Preferred Break Duration (minutes)</label>
+          <input class="form-input" id="planBreak" type="number" min="5" max="30" value="${prefs.breakDuration}" />
+        </div>
+      </div>
+
+      <h3 class="section-title">Choose Your Mode</h3>
+      <div class="mode-cards mb-16">
+        <div class="mode-card ${state.selectedMode === 'chill' ? 'selected' : ''}" data-mode="chill" onclick="selectMode('chill')">
+          <div class="mode-name">🌿 Chill Day</div>
+          <div class="mode-desc">Recovery & light workload. 2-3 short sessions.</div>
+          <div class="mode-stats"><span>25 min sessions</span><span>10-15 min breaks</span></div>
+        </div>
+        <div class="mode-card ${state.selectedMode === 'balanced' ? 'selected' : ''}" data-mode="balanced" onclick="selectMode('balanced')">
+          <div class="mode-name">⚖️ Balanced Day</div>
+          <div class="mode-desc" style="color:#00d4ff;">Recommended by StudentOS</div>
+          <div class="mode-stats"><span>25-30 min sessions</span><span>10 min breaks</span></div>
+        </div>
+        <div class="mode-card ${state.selectedMode === 'grind' ? 'selected' : ''}" data-mode="grind" onclick="selectMode('grind')">
+          <div class="mode-name">🔥 Grind Day</div>
+          <div class="mode-desc">Exam prep mode. 5-7 focused sessions.</div>
+          <div class="mode-stats"><span>40-45 min sessions</span><span>10-15 min breaks</span></div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="savePlannerPrefs();generateTimetable()" style="width:100%;padding:16px;font-size:16px;">
+        🤖 Generate My Day
+      </button>
+    `;
+  }
+
+  window.savePlannerPrefs = function() {
+    const prefs = getPreferences();
+    prefs.availableHours = parseFloat(document.getElementById('planHours').value) || 6;
+    prefs.wakeTime = document.getElementById('planWake').value || '07:00';
+    prefs.sleepDuration = parseFloat(document.getElementById('planSleep').value) || 8;
+    prefs.windDown = parseInt(document.getElementById('planWindDown').value) || 30;
+    prefs.stopBuffer = parseInt(document.getElementById('planStopBuf').value) || 30;
+    prefs.breakDuration = parseInt(document.getElementById('planBreak').value) || 10;
+    prefs.intensity = state.selectedMode;
+    savePreferences(prefs);
+  };
+
+  function renderTimetable() {
+    const container = document.getElementById('timetableContent');
+    if (state.timetable.length === 0) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>No schedule yet. Generate your day in the Plan tab.</p></div>`;
+      return;
+    }
+
+    const now = new Date();
+    const currentMin = now.getHours() * 60 + now.getMinutes();
+
+    container.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <span style="font-size:14px;color:#64748b;">${state.timetable.filter(s => s.type === 'study').length} study sessions</span>
+        <button class="btn btn-sm btn-secondary" onclick="exportICS()">📅 Export Calendar</button>
+      </div>
+      <div class="timeline">
+        ${state.timetable.map((session, idx) => {
+          const isCurrent = session.startMin <= currentMin && session.endMin > currentMin && !session.completed;
+          const isCompleted = session.completed;
+          const typeClass = session.type === 'study' ? 'study' : session.type === 'break' ? 'break' : session.type === 'meal' ? 'meal' : session.type === 'winddown' ? 'winddown' : 'bedtime';
+          const completedClass = isCompleted ? 'completed' : '';
+          const currentClass = isCurrent ? 'current' : '';
+
+          let content = '';
+          if (session.type === 'study') {
+            content = `
+              <div class="timeline-card">
+                <div class="flex items-center justify-between">
+                  <span class="time-badge">${formatAmPm(session.startMin)} – ${formatAmPm(session.endMin)}</span>
+                  <span style="font-size:12px;color:#64748b;">${session.duration} min</span>
+                </div>
+                <div style="margin-top:8px;"><strong>${escHtml(session.subjectName)}</strong></div>
+                <div style="font-size:14px;color:#94a3b8;">${escHtml(session.topic)}</div>
+                <div style="margin-top:6px;"><span class="method-label">${session.method}</span></div>
+                <div class="reason">${session.reasoning}</div>
+                ${isCurrent ? '<div style="margin-top:8px;"><button class="btn btn-sm btn-primary" onclick="startFocusFromTimetable(' + session.id + ')">🎯 Start Focus</button></div>' : ''}
+                ${!isCompleted && !isCurrent ? '<div style="margin-top:8px;"><button class="btn btn-sm btn-ghost" onclick="skipSession(' + session.id + ')">Skip</button></div>' : ''}
+                ${isCompleted ? '<div style="margin-top:6px;font-size:13px;color:#22c55e;">✓ Completed</div>' : ''}
+              </div>
+            `;
+          } else if (session.type === 'winddown') {
+            content = `
+              <div class="timeline-card" style="border-color:rgba(249,115,22,0.15);">
+                <div class="flex items-center justify-between">
+                  <span class="time-badge" style="color:#f97316;">${formatAmPm(session.startMin)} – ${formatAmPm(session.endMin)}</span>
+                  <span style="font-size:12px;color:#64748b;">${session.duration} min</span>
+                </div>
+                <div style="margin-top:6px;"><strong>🌙 Wind Down</strong></div>
+                <div style="font-size:13px;color:#94a3b8;">Begin relaxing for bed. No screens, dim lights.</div>
+              </div>
+            `;
+          } else if (session.type === 'bedtime') {
+            content = `
+              <div class="timeline-card" style="border-color:rgba(167,139,250,0.15);background:rgba(167,139,250,0.04);">
+                <div class="flex items-center justify-between">
+                  <span class="time-badge" style="color:#a78bfa;">${formatAmPm(session.startMin)}</span>
+                  <span style="font-size:12px;color:#64748b;">${session.duration} min</span>
+                </div>
+                <div style="margin-top:6px;"><strong>😴 Sleep</strong></div>
+                <div style="font-size:13px;color:#94a3b8;">Rest and recover. Goodnight!</div>
+              </div>
+            `;
+          } else {
+            content = `
+              <div class="timeline-card">
+                <div class="flex items-center justify-between">
+                  <span class="time-badge">${formatAmPm(session.startMin)} – ${formatAmPm(session.endMin)}</span>
+                  <span style="font-size:12px;color:#64748b;">${session.duration} min</span>
+                </div>
+                <div style="margin-top:4px;"><strong>${session.label || 'Break'}</strong></div>
+              </div>
+            `;
+          }
+
+          return `<div class="timeline-item ${typeClass} ${completedClass} ${currentClass}" style="animation-delay:${idx * 0.06}s">${content}</div>`;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function renderFocusPage() {
+    const container = document.getElementById('focusContent');
+    const nextSession = state.timetable.find(s => !s.completed && !s.skipped && s.type === 'study');
+    if (nextSession) {
+      container.innerHTML = `
+        <div class="glass-card" style="text-align:center;padding:40px 20px;">
+          <div style="font-size:48px;margin-bottom:12px;">🎯</div>
+          <h3 style="font-size:20px;margin-bottom:8px;">${escHtml(nextSession.subjectName)}</h3>
+          <p style="color:#94a3b8;">${escHtml(nextSession.topic)}</p>
+          <p style="color:#a78bfa;margin:8px 0 4px;">${nextSession.method}</p>
+          <p style="font-size:13px;color:#64748b;margin-bottom:16px;">${nextSession.instruction}</p>
+          <p style="font-size:14px;color:#00d4ff;margin-bottom:16px;">${formatAmPm(nextSession.startMin)} – ${formatAmPm(nextSession.endMin)} · ${nextSession.duration} min</p>
+          <button class="btn btn-primary" onclick="startFocusFromTimetable(${nextSession.id})">🚀 Start Session</button>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎯</div><p>No upcoming study sessions. Generate a schedule in the Plan tab.</p></div>`;
+    }
+  }
+
+  function renderSounds() {
+    const container = document.getElementById('soundsContent');
+    const focusSounds = [
+      { id: 'piano', label: 'Soft Piano', icon: '🎹', type: 'piano' },
+      { id: 'lofi', label: 'Lo-fi Study', icon: '🎧', type: 'lofi' },
+      { id: 'ambient', label: 'Gentle Ambient', icon: '🌊', type: 'ambient' },
+      { id: 'deepfocus', label: 'Deep Focus', icon: '🧘', type: 'deepfocus' }
+    ];
+    const sleepSounds = [
+      { id: 'rain', label: 'Light Rain', icon: '🌧️', type: 'rain' },
+      { id: 'ocean', label: 'Ocean Waves', icon: '🌊', type: 'ocean' },
+      { id: 'fan', label: 'Soft Fan', icon: '🌀', type: 'fan' },
+      { id: 'pinknoise', label: 'Pink Noise', icon: '🎛️', type: 'pinknoise' },
+      { id: 'brownnoise', label: 'Brown Noise', icon: '🎛️', type: 'brownnoise' },
+      { id: 'fireplace', label: 'Cozy Fireplace', icon: '🔥', type: 'fireplace' }
+    ];
+
+    container.innerHTML = `
+      <h3 class="section-title">🎵 Focus Music</h3>
+      <div class="sound-grid mb-16">
+        ${focusSounds.map(s => `
+          <div class="sound-card" data-sound-id="${s.id}">
+            <div class="sound-icon">${s.icon}</div>
+            <div class="sound-name">${s.label}</div>
+            <div class="sound-controls">
+              <button class="sound-btn sound-play" onclick="toggleSound('${s.id}','${s.type}','${s.label}')">▶</button>
+              <input type="range" min="0" max="1" step="0.05" value="0.3" oninput="setSoundVolume('${s.id}', parseFloat(this.value))" style="width:50px;" />
+              <button class="sound-btn sound-loop" onclick="toggleSoundLoop('${s.id}')" style="opacity:0.4;">🔁</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <h3 class="section-title">😴 Sleep Sounds</h3>
+      <div class="sound-grid">
+        ${sleepSounds.map(s => `
+          <div class="sound-card" data-sound-id="${s.id}">
+            <div class="sound-icon">${s.icon}</div>
+            <div class="sound-name">${s.label}</div>
+            <div class="sound-controls">
+              <button class="sound-btn sound-play" onclick="toggleSound('${s.id}','${s.type}','${s.label}')">▶</button>
+              <input type="range" min="0" max="1" step="0.05" value="0.3" oninput="setSoundVolume('${s.id}', parseFloat(this.value))" style="width:50px;" />
+              <button class="sound-btn sound-loop" onclick="toggleSoundLoop('${s.id}')" style="opacity:0.4;">🔁</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  window.toggleSound = function(id, type, label) {
+    if (soundStates[id] && soundStates[id].playing) {
+      stopSound(id);
+    } else {
+      // Stop other sounds in same category
+      const isFocus = ['piano','lofi','ambient','deepfocus'].includes(type);
+      Object.keys(soundStates).forEach(key => {
+        const s = soundStates[key];
+        if (s && s.playing) {
+          const sIsFocus = ['piano','lofi','ambient','deepfocus'].includes(s.type);
+          if (isFocus === sIsFocus || key !== id) stopSound(key);
+        }
+      });
+      startSound(id, type, label);
+    }
+  };
+
+  function renderSettings() {
+    const prefs = getPreferences();
+    const container = document.getElementById('settingsContent');
+    container.innerHTML = `
+      <div class="glass-card">
+        <div class="settings-group">
+          <h3>Planning Preferences</h3>
+          <div class="setting-row">
+            <div><div class="setting-label">Default Planning Mode</div></div>
+            <select class="form-select" id="settingMode" style="width:auto;">
+              <option value="chill" ${prefs.intensity === 'chill' ? 'selected' : ''}>Chill Day</option>
+              <option value="balanced" ${(prefs.intensity||'balanced') === 'balanced' ? 'selected' : ''}>Balanced Day</option>
+              <option value="grind" ${prefs.intensity === 'grind' ? 'selected' : ''}>Grind Day</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Study Block Length</div><div class="setting-desc">Minutes per focus session</div></div>
+            <input class="form-input" id="settingBlockLen" type="number" min="15" max="60" value="${prefs.studyBlockLength || 30}" style="width:80px;" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Break Length</div><div class="setting-desc">Minutes between sessions</div></div>
+            <input class="form-input" id="settingBreakLen" type="number" min="5" max="30" value="${prefs.breakDuration || 10}" style="width:80px;" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Long Break Frequency</div></div>
+            <input class="form-input" id="settingLongFreq" type="number" min="2" max="6" value="${prefs.longBreakFrequency || 3}" style="width:80px;" />
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>Sleep & Routine</h3>
+          <div class="setting-row">
+            <div><div class="setting-label">Target Sleep Duration</div><div class="setting-desc">Hours per night</div></div>
+            <input class="form-input" id="settingSleep" type="number" min="5" max="12" step="0.5" value="${prefs.sleepDuration || 8}" style="width:80px;" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Wake Up Time</div></div>
+            <input class="form-input" id="settingWake" type="time" value="${prefs.wakeTime || '07:00'}" style="width:auto;" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Wind-Down Duration</div><div class="setting-desc">Minutes to unwind before sleep</div></div>
+            <input class="form-input" id="settingWindDown" type="number" min="15" max="90" value="${prefs.windDown || 30}" style="width:80px;" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Stop Studying Buffer</div><div class="setting-desc">Minutes before bed</div></div>
+            <input class="form-input" id="settingStopBuf" type="number" min="15" max="120" value="${prefs.stopBuffer || 30}" style="width:80px;" />
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>Features</h3>
+          <div class="setting-row">
+            <div><div class="setting-label">Protect Sleep</div><div class="setting-desc">Never schedule study into sleep time</div></div>
+            <button class="toggle ${prefs.protectSleep !== false ? 'active' : ''}" id="settingProtect" onclick="toggleSetting('settingProtect')"></button>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Auto-Reschedule</div><div class="setting-desc">Automatically adjust skipped sessions</div></div>
+            <button class="toggle ${prefs.autoReschedule !== false ? 'active' : ''}" id="settingAuto" onclick="toggleSetting('settingAuto')"></button>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Calendar Export</div><div class="setting-desc">Include schedules in .ics export</div></div>
+            <button class="toggle ${prefs.calendarExport !== false ? 'active' : ''}" id="settingCal" onclick="toggleSetting('settingCal')"></button>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>Appearance</h3>
+          <div class="setting-row">
+            <div><div class="setting-label">Animation Intensity</div></div>
+            <select class="form-select" id="settingAnim" style="width:auto;">
+              <option value="low" ${prefs.animationIntensity === 'low' ? 'selected' : ''}>Low</option>
+              <option value="medium" ${prefs.animationIntensity === 'medium' ? 'selected' : ''}>Medium</option>
+              <option value="high" ${(prefs.animationIntensity||'high') === 'high' ? 'selected' : ''}>High</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>Data</h3>
+          <div class="setting-row">
+            <div><div class="setting-label">Export Data</div><div class="setting-desc">Download all data as JSON</div></div>
+            <button class="btn btn-sm btn-secondary" onclick="exportData()">Export</button>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Reset All Data</div><div class="setting-desc">Permanently delete everything</div></div>
+            <button class="btn btn-sm btn-danger" onclick="resetData()">Reset</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary mt-16" onclick="saveSettings()" style="width:100%;">Save Settings</button>
+    `;
+  }
+
+  function renderPage(page) {
+    switch(page) {
+      case 'dashboard': renderDashboard(); break;
+      case 'subjects': renderSubjects(); break;
+      case 'planner': renderPlanner(); break;
+      case 'timetable': renderTimetable(); break;
+      case 'focus': renderFocusPage(); break;
+      case 'sounds': renderSounds(); break;
+      case 'settings': renderSettings(); break;
+    }
+  }
+
+  function escHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ---- CONFIDENCE SLIDER ----
+  document.addEventListener('input', function(e) {
+    if (e.target.id === 'subjConfidence') {
+      document.getElementById('confidenceVal').textContent = e.target.value;
+    }
+  });
+
+  // ---- INIT ----
+  renderAllPages();
+
+  // Set today's date as default for last revision
+  const today = new Date().toISOString().split('T')[0];
+  const revInput = document.getElementById('subjLastRev');
+  if (revInput && !revInput.value) revInput.value = today;
+
+  // If subjects exist, show dashboard with data
+  if (state.subjects.length > 0) {
+    renderDashboard();
+  }
+
+  console.log('StudentOS initialized. 📚🎯');
+})();
+</script>
+</body>
+</html>
